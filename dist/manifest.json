@@ -1,0 +1,12 @@
+{
+  "name": "Stats md",
+  "version": "1.0.0",
+  "manifest_version": 1,
+  "action": {
+    "title": "Statblock Manager",
+    "icon": "/icon.svg",
+    "popover": "/",
+    "width": 300,
+    "height": 200
+  }
+}
