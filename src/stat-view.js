@@ -21,6 +21,27 @@ OBR.onReady(() => {
     }
   });
 
+  // Helper to extract the visible "Add Text" label from an Owlbear Rodeo token
+  function getTokenDisplayName(item, fallbackName) {
+    // 1. Check standard plainText label from the "Add Text" tool
+    if (item.text && typeof item.text.plainText === "string" && item.text.plainText.trim() !== "") {
+      return item.text.plainText.trim();
+    }
+    // 2. Fallback: extract text from richText nodes if plainText is empty
+    if (item.text && Array.isArray(item.text.richText)) {
+      const extracted = item.text.richText
+        .map(node => (node.children ? node.children.map(c => c.text || "").join("") : ""))
+        .join(" ")
+        .trim();
+      if (extracted !== "") return extracted;
+    }
+    // 3. Fallback: token asset name or statblock name
+    if (item.name && item.name.trim() !== "") {
+      return item.name.trim();
+    }
+    return fallbackName;
+  }
+
   async function updateView(selection) {
     if (!selection || selection.length === 0) {
       container.innerHTML = "Select a token to view its stat block.";
@@ -31,13 +52,13 @@ OBR.onReady(() => {
     const item = items[0];
 
     if (!item || !item.metadata || !item.metadata[STATBLOCK_KEY]) {
-      container.innerHTML = `<div><strong>${item ? item.name || "Token" : "Selection"}</strong> has no stat block assigned.</div><div style="font-size:11px; color:#9ca3af; margin-top:4px;">Right-click the token and choose 'Assign Stat Block'.</div>`;
+      const displayName = item ? getTokenDisplayName(item, "Token") : "Selection";
+      container.innerHTML = `<div><strong>${displayName}</strong> has no stat block assigned.</div><div style="font-size:11px; color:#9ca3af; margin-top:4px;">Right-click the token and choose 'Assign Stat Block'.</div>`;
       return;
     }
 
     const data = item.metadata[STATBLOCK_KEY];
-    // Use the map token's name if set, otherwise fall back to the statblock name
-    const rollerName = (item.name && item.name.trim() !== "") ? item.name.trim() : data.name;
+    const rollerName = getTokenDisplayName(item, data.name);
     renderStatBlock(data, rollerName);
   }
 
@@ -104,9 +125,8 @@ OBR.onReady(() => {
 
   function dispatchRollMessage(rawMessage) {
     const isPublic = localStorage.getItem("qs_public_rolls") === "true";
-    const formattedMsg = isPublic ? `${rawMessage}` : `[Private DM] ${rawMessage}`;
+    const formattedMsg = isPublic ? `🎲 ${rawMessage}` : `[Private DM] ${rawMessage}`;
 
-    // Save to GM's localStorage history
     try {
       const history = JSON.parse(localStorage.getItem("qs_roll_history") || "[]");
       const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
