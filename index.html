@@ -24,36 +24,54 @@
       accent-color: #facc15;
       cursor: pointer;
     }
+    #gmControls { display: none; }
   </style>
 </head>
 <body>
-  <h3>Quick Statblock</h3>
-  <p>Right-click any Character token to assign or view its stat block.</p>
-  
-  <div class="toggle-box">
-    <span id="modeLabel">Private DM Rolls</span>
-    <input type="checkbox" id="publicRollToggle">
+  <div id="gmControls">
+    <h3>Quick Statblock</h3>
+    <p>Right-click any Character token to assign or view its stat block.</p>
+    
+    <div class="toggle-box">
+      <span id="modeLabel">Private DM Rolls</span>
+      <input type="checkbox" id="publicRollToggle">
+    </div>
+  </div>
+
+  <div id="playerNotice" style="display:none; font-size: 12px; color: #a1a1aa;">
+    Quick Statblock listener active.
   </div>
 
   <script type="module">
-    const toggle = document.getElementById("publicRollToggle");
-    const label = document.getElementById("modeLabel");
+    import OBR from "@owlbear-rodeo/sdk";
 
-    // Load saved state (defaults to false / Private)
-    const isPublic = localStorage.getItem("qs_public_rolls") === "true";
-    toggle.checked = isPublic;
-    updateLabel(isPublic);
+    OBR.onReady(async () => {
+      const role = await OBR.player.getRole();
+      if (role !== "GM") {
+        document.getElementById("playerNotice").style.display = "block";
+        return;
+      }
 
-    toggle.addEventListener("change", (e) => {
-      const checked = e.target.checked;
-      localStorage.setItem("qs_public_rolls", checked);
-      updateLabel(checked);
+      document.getElementById("gmControls").style.display = "block";
+
+      const toggle = document.getElementById("publicRollToggle");
+      const label = document.getElementById("modeLabel");
+
+      const isPublic = localStorage.getItem("qs_public_rolls") === "true";
+      toggle.checked = isPublic;
+      updateLabel(isPublic);
+
+      toggle.addEventListener("change", (e) => {
+        const checked = e.target.checked;
+        localStorage.setItem("qs_public_rolls", checked);
+        updateLabel(checked);
+      });
+
+      function updateLabel(pub) {
+        label.innerText = pub ? "Public Room Rolls" : "Private DM Rolls";
+        label.style.color = pub ? "#4ade80" : "#facc15";
+      }
     });
-
-    function updateLabel(pub) {
-      label.innerText = pub ? "Public Room Rolls" : "Private DM Rolls";
-      label.style.color = pub ? "#4ade80" : "#facc15";
-    }
   </script>
   <script type="module" src="/src/main.js"></script>
 </body>
