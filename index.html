@@ -4,15 +4,57 @@
   <meta charset="UTF-8">
   <style>
     body { font-family: sans-serif; color: #fff; background: #2E3136; margin: 0; padding: 15px; text-align: center; }
-    h3 { margin-top: 0; font-size: 16px; color: #facc15; }
-    p { font-size: 13px; color: #a1a1aa; line-height: 1.4; }
+    h3 { margin-top: 0; font-size: 16px; color: #facc15; margin-bottom: 8px; }
+    p { font-size: 12px; color: #a1a1aa; line-height: 1.4; margin-bottom: 14px; }
+    
+    .toggle-box {
+      background: #202225;
+      border: 1px solid #40444b;
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #facc15;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h3>Quick Statblock is Active!</h3>
-  <p>To use this extension, simply <strong>right-click any token</strong> on your map and select "Assign Stat Block" or "View Stat Block".</p>
+  <h3>Quick Statblock</h3>
+  <p>Right-click any Character token to assign or view its stat block.</p>
   
-  <!-- This script registers the context menus as soon as this popup opens -->
+  <div class="toggle-box">
+    <span id="modeLabel">Private DM Rolls</span>
+    <input type="checkbox" id="publicRollToggle">
+  </div>
+
+  <script type="module">
+    const toggle = document.getElementById("publicRollToggle");
+    const label = document.getElementById("modeLabel");
+
+    // Load saved state (defaults to false / Private)
+    const isPublic = localStorage.getItem("qs_public_rolls") === "true";
+    toggle.checked = isPublic;
+    updateLabel(isPublic);
+
+    toggle.addEventListener("change", (e) => {
+      const checked = e.target.checked;
+      localStorage.setItem("qs_public_rolls", checked);
+      updateLabel(checked);
+    });
+
+    function updateLabel(pub) {
+      label.innerText = pub ? "Public Room Rolls" : "Private DM Rolls";
+      label.style.color = pub ? "#4ade80" : "#facc15";
+    }
+  </script>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
