@@ -36,10 +36,12 @@ OBR.onReady(() => {
     }
 
     const data = item.metadata[STATBLOCK_KEY];
-    renderStatBlock(data);
+    // Use the map token's name if set, otherwise fall back to the statblock name
+    const rollerName = (item.name && item.name.trim() !== "") ? item.name.trim() : data.name;
+    renderStatBlock(data, rollerName);
   }
 
-  function renderStatBlock(data) {
+  function renderStatBlock(data, rollerName) {
     let html = `
       <h2>${data.name}</h2>
       <div class="meta">${data.meta}</div>
@@ -77,11 +79,9 @@ OBR.onReady(() => {
 
     container.innerHTML = html;
 
-    // Attach click listeners with Shift/Ctrl modifier detection
     container.querySelectorAll(".rollable").forEach(el => {
       if (el.classList.contains("dc")) return;
 
-      // Add helpful hover tooltips
       if (el.classList.contains("damage")) {
         el.title = "Click: Normal | Shift+Click: Critical Hit";
       } else {
@@ -94,31 +94,29 @@ OBR.onReady(() => {
         const modString = el.getAttribute("data-mod");
 
         if (diceString) {
-          rollDiceExpression(diceString, data.name, e.shiftKey);
+          rollDiceExpression(diceString, rollerName, e.shiftKey);
         } else if (modString) {
-          rollModifier(modString, data.name, e.shiftKey, e.ctrlKey || e.metaKey);
+          rollModifier(modString, rollerName, e.shiftKey, e.ctrlKey || e.metaKey);
         }
       };
     });
   }
 
-  // Handles broadcasting public rolls vs showing private DM notifications
   function dispatchRollMessage(rawMessage) {
     const isPublic = localStorage.getItem("qs_public_rolls") === "true";
-    const formattedMsg = isPublic ? `🎲 ${rawMessage}` : `[Private DM] ${rawMessage}`;
+    const formattedMsg = isPublic ? `${rawMessage}` : `[Private DM] ${rawMessage}`;
 
-    // 1. Save to localStorage history so index.html updates immediately
+    // Save to GM's localStorage history
     try {
       const history = JSON.parse(localStorage.getItem("qs_roll_history") || "[]");
       const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       history.unshift({ time: timestamp, text: formattedMsg, isPublic });
-      if (history.length > 30) history.pop(); // Keep last 30 rolls
+      if (history.length > 30) history.pop();
       localStorage.setItem("qs_roll_history", JSON.stringify(history));
     } catch (e) {
       console.error("Failed to save roll history:", e);
     }
 
-    // 2. Still fire the OBR notification/broadcast as usual
     if (isPublic) {
       OBR.notification.show(formattedMsg);
       OBR.broadcast.sendMessage(ROLL_CHANNEL, { message: formattedMsg });
@@ -127,7 +125,6 @@ OBR.onReady(() => {
     }
   }
 
-  // Damage Rolls (Supports Shift+Click for Critical Hits)
   function rollDiceExpression(expr, creatureName, isCrit) {
     const cleanExpr = expr.replace(/\s+/g, '');
     const match = cleanExpr.match(/^(\d+)d(\d+)([\+\-]\d+)?$/i);
@@ -151,19 +148,17 @@ OBR.onReady(() => {
     }
     total += bonus;
 
-    const critLabel = isCrit ? "Critical hit! " : "";
+    const critLabel = isCrit ? "CRIT! " : "";
     const displayExpr = isCrit ? `${count}d${sides}${bonus ? (bonus > 0 ? `+${bonus}` : bonus) : ''}` : expr;
     const bonusText = bonus !== 0 ? ` ${bonus > 0 ? '+' : '-'} ${Math.abs(bonus)}` : '';
 
     dispatchRollMessage(`${critLabel}${creatureName} damage (${displayExpr}): [${rolls.join(", ")}]${bonusText} = Total: ${total}`);
   }
 
-  // Attack / Check / Save Rolls (Supports Shift+Click Advantage & Ctrl+Click Disadvantage)
   function rollModifier(modStr, creatureName, isAdv, isDis) {
     const mod = parseInt(modStr);
     const bonusText = mod !== 0 ? ` ${mod > 0 ? '+' : '-'} ${Math.abs(mod)}` : '';
 
-    // If both are held, they cancel out to a normal roll per 5e rules
     if ((isAdv && isDis) || (!isAdv && !isDis)) {
       const d20 = Math.floor(Math.random() * 20) + 1;
       const total = d20 + mod;

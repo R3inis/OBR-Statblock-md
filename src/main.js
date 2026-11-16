@@ -32,8 +32,20 @@ OBR.onReady(() => {
     }
   });
 
-  // 3. Listen for Public Rolls sent by the GM and display them to everyone
+  // 3. Listen for Public Rolls sent by the GM and log them for players
   OBR.broadcast.onMessage(ROLL_CHANNEL, (event) => {
-    OBR.notification.show(event.data.message);
+    const msg = event.data.message;
+    OBR.notification.show(msg);
+
+    try {
+      const history = JSON.parse(localStorage.getItem("qs_roll_history") || "[]");
+      const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      history.unshift({ time: timestamp, text: msg, isPublic: true });
+      if (history.length > 30) history.pop();
+      localStorage.setItem("qs_roll_history", JSON.stringify(history));
+      window.dispatchEvent(new Event("qs_history_updated"));
+    } catch (e) {
+      console.error("Failed to save incoming public roll:", e);
+    }
   });
 });
