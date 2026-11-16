@@ -5,7 +5,7 @@ export function parseStatBlock(markdownText) {
     name: "",
     meta: "",
     initiative: "",
-    speed: "", // Added speed
+    speed: "",
     saves: "",
     abilities: {
       STR: { score: 0, mod: "+0" }, DEX: { score: 0, mod: "+0" },
@@ -85,28 +85,53 @@ function formatRollableElements(text) {
   let tokens = [];
   let t = 0;
 
+  // 1. Recharge Abilities (Matches "Recharge 5-6", "Recharge 5–6", "Recharge 6")
+  // Must run BEFORE modifier regex so "-6" isn't parsed as a negative modifier!
+  text = text.replace(/\bRecharge\s+([1-6])(?:\s*[\-–—]\s*6)?\b/gi, (match, minVal) => {
+    let token = `@@RECH${t++}@@`;
+    tokens.push({
+      token,
+      html: `<span class="rollable recharge" data-recharge="${minVal}">${match}</span>`
+    });
+    return token;
+  });
+
+  // 2. Damage Rolls
   text = text.replace(/\b(\d+d\d+(?:\s*[\+\-]\s*\d+)?)\b/gi, (match) => {
     let token = `@@DMG${t++}@@`;
-    tokens.push({ token, html: `<span class="rollable damage" data-roll="${match.replace(/\s+/g, '')}">${match}</span>` });
+    tokens.push({
+      token,
+      html: `<span class="rollable damage" data-roll="${match.replace(/\s+/g, '')}">${match}</span>`
+    });
     return token;
   });
 
+  // 3. DCs
   text = text.replace(/DC\s+(\d+)/gi, (match, p1) => {
     let token = `@@DC${t++}@@`;
-    tokens.push({ token, html: `<span class="rollable dc" data-dc="${p1}">DC ${p1}</span>` });
+    tokens.push({
+      token,
+      html: `<span class="rollable dc" data-dc="${p1}">DC ${p1}</span>`
+    });
     return token;
   });
 
+  // 4. Modifiers (+5, -1, etc.)
   text = text.replace(/(^|\s|\(|>|\*|\,)([+-]\d+)\b/g, (match, prefix, mod) => {
     let token = `@@MOD${t++}@@`;
-    tokens.push({ token, html: `${prefix}<span class="rollable check-save" data-mod="${mod}">${mod}</span>` });
+    tokens.push({
+      token,
+      html: `${prefix}<span class="rollable check-save" data-mod="${mod}">${mod}</span>`
+    });
     return token;
   });
 
+  // 5. Restore HTML tags
   for (let tokenObj of tokens) {
     text = text.replace(tokenObj.token, tokenObj.html);
   }
 
+  // 6. Clean up Markdown formatting
   text = text.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
   text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');

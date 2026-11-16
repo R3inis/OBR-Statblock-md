@@ -21,13 +21,10 @@ OBR.onReady(() => {
     }
   });
 
-  // Helper to extract the visible "Add Text" label from an Owlbear Rodeo token
   function getTokenDisplayName(item, fallbackName) {
-    // 1. Check standard plainText label from the "Add Text" tool
     if (item.text && typeof item.text.plainText === "string" && item.text.plainText.trim() !== "") {
       return item.text.plainText.trim();
     }
-    // 2. Fallback: extract text from richText nodes if plainText is empty
     if (item.text && Array.isArray(item.text.richText)) {
       const extracted = item.text.richText
         .map(node => (node.children ? node.children.map(c => c.text || "").join("") : ""))
@@ -35,7 +32,6 @@ OBR.onReady(() => {
         .trim();
       if (extracted !== "") return extracted;
     }
-    // 3. Fallback: token asset name or statblock name
     if (item.name && item.name.trim() !== "") {
       return item.name.trim();
     }
@@ -103,7 +99,9 @@ OBR.onReady(() => {
     container.querySelectorAll(".rollable").forEach(el => {
       if (el.classList.contains("dc")) return;
 
-      if (el.classList.contains("damage")) {
+      if (el.classList.contains("recharge")) {
+        el.title = "Click: Roll 1d6 to Recharge";
+      } else if (el.classList.contains("damage")) {
         el.title = "Click: Normal | Shift+Click: Critical Hit";
       } else {
         el.title = "Click: Normal | Shift+Click: Advantage | Ctrl+Click: Disadvantage";
@@ -111,10 +109,13 @@ OBR.onReady(() => {
 
       el.onclick = (e) => {
         e.stopPropagation();
+        const rechargeMin = el.getAttribute("data-recharge");
         const diceString = el.getAttribute("data-roll");
         const modString = el.getAttribute("data-mod");
 
-        if (diceString) {
+        if (rechargeMin) {
+          rollRecharge(parseInt(rechargeMin), rollerName, el.innerText);
+        } else if (diceString) {
           rollDiceExpression(diceString, rollerName, e.shiftKey);
         } else if (modString) {
           rollModifier(modString, rollerName, e.shiftKey, e.ctrlKey || e.metaKey);
@@ -125,7 +126,7 @@ OBR.onReady(() => {
 
   function dispatchRollMessage(rawMessage) {
     const isPublic = localStorage.getItem("qs_public_rolls") === "true";
-    const formattedMsg = isPublic ? `🎲 ${rawMessage}` : `[Private DM] ${rawMessage}`;
+    const formattedMsg = isPublic ? `${rawMessage}` : `[Private DM] ${rawMessage}`;
 
     try {
       const history = JSON.parse(localStorage.getItem("qs_roll_history") || "[]");
@@ -143,6 +144,15 @@ OBR.onReady(() => {
     } else {
       OBR.notification.show(formattedMsg);
     }
+  }
+
+  // Recharge Roll (Rolls 1d6 and compares against target minimum)
+  function rollRecharge(minTarget, creatureName, labelText) {
+    const d6 = Math.floor(Math.random() * 6) + 1;
+    const success = d6 >= minTarget;
+    const status = success ? "Recharged!" : "Not Recharged";
+
+    dispatchRollMessage(`${creatureName} (${labelText}): d6 [${d6}] → ${status}`);
   }
 
   function rollDiceExpression(expr, creatureName, isCrit) {
