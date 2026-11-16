@@ -7,7 +7,7 @@
     "icon": "/icon.svg",
     "popover": "/index.html",
     "width": 300,
-    "height": 220,
+    "height": 380,
     "filter": {
       "roles": ["GM"]
     }

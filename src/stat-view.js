@@ -105,13 +105,25 @@ OBR.onReady(() => {
   // Handles broadcasting public rolls vs showing private DM notifications
   function dispatchRollMessage(rawMessage) {
     const isPublic = localStorage.getItem("qs_public_rolls") === "true";
+    const formattedMsg = isPublic ? `🎲 ${rawMessage}` : `🤫 [Private DM] ${rawMessage}`;
 
+    // 1. Save to localStorage history so index.html updates immediately
+    try {
+      const history = JSON.parse(localStorage.getItem("qs_roll_history") || "[]");
+      const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      history.unshift({ time: timestamp, text: formattedMsg, isPublic });
+      if (history.length > 30) history.pop(); // Keep last 30 rolls
+      localStorage.setItem("qs_roll_history", JSON.stringify(history));
+    } catch (e) {
+      console.error("Failed to save roll history:", e);
+    }
+
+    // 2. Still fire the OBR notification/broadcast as usual
     if (isPublic) {
-      const publicMsg = `🎲 ${rawMessage}`;
-      OBR.notification.show(publicMsg);
-      OBR.broadcast.sendMessage(ROLL_CHANNEL, { message: publicMsg });
+      OBR.notification.show(formattedMsg);
+      OBR.broadcast.sendMessage(ROLL_CHANNEL, { message: formattedMsg });
     } else {
-      OBR.notification.show(`[Private DM] ${rawMessage}`);
+      OBR.notification.show(formattedMsg);
     }
   }
 
