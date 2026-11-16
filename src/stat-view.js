@@ -105,7 +105,7 @@ OBR.onReady(() => {
   // Handles broadcasting public rolls vs showing private DM notifications
   function dispatchRollMessage(rawMessage) {
     const isPublic = localStorage.getItem("qs_public_rolls") === "true";
-    const formattedMsg = isPublic ? `🎲 ${rawMessage}` : `🤫 [Private DM] ${rawMessage}`;
+    const formattedMsg = isPublic ? `🎲 ${rawMessage}` : `[Private DM] ${rawMessage}`;
 
     // 1. Save to localStorage history so index.html updates immediately
     try {
